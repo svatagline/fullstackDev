@@ -36,4 +36,5 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 frontend setup with privet protecting route: 3 hrs
-backend setup with db connection
+backend setup with db connection using ai 1:30
+testing api 45 min

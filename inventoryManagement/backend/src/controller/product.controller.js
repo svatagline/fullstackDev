@@ -9,7 +9,7 @@ export const createProduct = async (req, res) => {
 };
 
 export const getProducts = async (req, res) => {
-  const products = await Product.find().populate("createdBy", "name");
+  const products = await Product.find().populate("stock", "title");
   res.json(products);
 };
 

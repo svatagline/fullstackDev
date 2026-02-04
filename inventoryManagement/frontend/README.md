@@ -37,4 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 frontend setup with privet protecting route: 3 hrs
 backend setup with db connection using ai 1:30
-testing api 45 min
+testing api 45 min.

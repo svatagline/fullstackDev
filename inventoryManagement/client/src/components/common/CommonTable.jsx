@@ -1,38 +1,25 @@
-import React from "react";
-import CommonModel from "./CommonModel";
-
-const CommonTable = () => {
+const CommonTable = ({ list, columns }) => {
   return (
     <div>
       {" "}
       <table className="table table-striped">
         <thead>
           <tr>
-            <th scope="col">#</th>
-            <th scope="col">First</th>
-            <th scope="col">Last</th>
-            <th scope="col">Handle</th>
+            {columns?.map((column, index) => (
+              <th key={index} scope="col">
+                {column.name}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th scope="row">1</th>
-            <td>Mark</td>
-            <td>Otto</td>
-            <td>@mdo</td>
-          </tr>
-          <tr>
-            <th scope="row">2</th>
-            <td>Jacob</td>
-            <td>Thornton</td>
-            <td>@fat</td>
-          </tr>
-          <tr>
-            <th scope="row">3</th>
-            <td>John</td>
-            <td>Doe</td>
-            <td>@social</td>
-          </tr>
+          {list.map((item, index) => (
+            <tr key={index + 1}>
+              {columns?.map((column, colIndex) => (
+                <td key={colIndex}>{column.selector(item, index)}</td>
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

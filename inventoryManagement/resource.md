@@ -15,3 +15,6 @@ https://medium.com/@umaishassan/private-protected-and-public-routes-in-react-rou
 
 Layout:
 https://codesandbox.io/p/sandbox/tailwindtoolbox-admin-template-w6rtr
+
+Tailwind component
+https://tailwindcss.com/plus/ui-blocks/marketing/sections/heroes

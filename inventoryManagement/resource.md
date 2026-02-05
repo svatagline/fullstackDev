@@ -12,3 +12,6 @@ Frontend:Layout:https://dev.to/sajithpj/master-the-layouts-in-react-js-control-l
 
 Privet protecting route
 https://medium.com/@umaishassan/private-protected-and-public-routes-in-react-router-v6-e8fb623aa81
+
+Layout:
+https://codesandbox.io/p/sandbox/tailwindtoolbox-admin-template-w6rtr

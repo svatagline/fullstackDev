@@ -5,6 +5,7 @@ export const protect = (req, res, next) => {
   if (!token) return res.status(401).json({ message: "Unauthorized" });
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  console.log("object", decoded);
   req.user = decoded;
   next();
 };

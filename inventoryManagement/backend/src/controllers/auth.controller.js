@@ -8,7 +8,7 @@ export const login = async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-  const match = await bcrypt.compare(password, user.password);
+  const match = password === user.password;
   if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
   const token = signToken({ id: user._id, role: user.role });

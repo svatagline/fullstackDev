@@ -6,7 +6,7 @@ export const createOrder = async (req, res) => {
   const { productId, quantity } = req.body;
 
   const userId = req.user.id;
-
+  console.log("---------->", { userId });
   const product = await Product.findById(productId);
   if (!product) return res.status(404).json({ message: "Product not found" });
   if (quantity > product.stock)
@@ -17,7 +17,7 @@ export const createOrder = async (req, res) => {
 
   const order = await Order.create({
     product: productId,
-    user: userId,
+    userId: userId,
     quantity,
   });
 

@@ -2,10 +2,16 @@ import { useEffect, useState, useContext } from "react";
 import api from "../api/axios";
 import { SocketContext } from "../context/SocketContext";
 import Table from "../components/common/Table";
+import useSocketEvent from "./useSocketEvent";
 
 const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const socket = useContext(SocketContext);
+
+  useSocketEvent({
+    title: "Dashboard Page",
+    onInventoryUpdate: (order) => setOrders((prev) => [order, ...prev]),
+  });
 
   useEffect(() => {
     api.get("/orders").then((res) => setOrders(res.data));

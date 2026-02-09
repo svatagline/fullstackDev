@@ -238,6 +238,9 @@ const Products = () => {
     },
   ];
 
+  if (error) {
+    return <div className="alert alert-danger">Error: {error}</div>;
+  }
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -251,7 +254,7 @@ const Products = () => {
         </button>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {/* {error && <div className="alert alert-danger">{error}</div>} */}
 
       <Table columns={columns} data={data} />
 

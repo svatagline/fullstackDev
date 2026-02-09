@@ -1,17 +1,17 @@
-import { useEffect, useState, useContext } from "react";
-import api from "../api/axios";
+import { useEffect, useState, useContext, useRef } from "react";
 import { SocketContext } from "../context/SocketContext";
 import Table from "../components/common/Table";
 import Modal from "../components/common/Modal";
 import FormInput from "../components/common/FormInput";
 import { useApi } from "../api/useApi";
 import useSocketEvent from "./useSocketEvent";
+import CommonForm from "../components/common/CommonForm";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [modalShow, setModalShow] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [orderProduct, setOrderProduct] = useState(null); // For order modal
+  const [orderProduct, setOrderProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -20,6 +20,9 @@ const Products = () => {
     quantity: "",
   });
   const [errorMsg, setErrorMsg] = useState("");
+  const formRef = useRef();
+  const { get, post, put, delete: del, loading, error } = useApi();
+  const socket = useContext(SocketContext);
 
   useSocketEvent({
     title: "Products Page",
@@ -29,51 +32,22 @@ const Products = () => {
       ),
   });
 
-  const socket = useContext(SocketContext);
-
-  const fetchProducts = useApi(() => api.get("/products"));
-  const addOrUpdateProduct = useApi((data, id = null) => {
-    if (id) return api.put(`/products/${id}`, data);
-    return api.post("/products", data);
-  });
-  const deleteProductApi = useApi((id) => api.delete(`/products/${id}`));
-  const addOrderApi = useApi((data) => api.post("/orders", data));
-
+  // ---------------- Fetch Products ----------------
   useEffect(() => {
-    fetchProducts.request().then((data) => setProducts(data));
+    get("/products").then(setProducts);
   }, []);
 
-  //   useEffect(() => {
-  //     if (!socket) return;
-
-  //     // Live stock update
-  //     socket.on("inventory:update", ({ productId, stock }) => {
-  //       console.log("stocktest", stock);
-  //   setProducts((prev) =>
-  //     prev.map((p) => (p._id === productId ? { ...p, stock } : p)),
-  //   );
-  //     });
-
-  //     // Admin notification example
-  //     socket.on("admin:new-order", (data) => {
-  //       console.log("New order placed:", data);
-  //     });
-
-  //     return () => {
-  //       socket.off("inventory:update");
-  //       socket.off("admin:new-order");
-  //     };
-  //   }, [socket]);
-
-  // --- Product Modal ---
+  // ---------------- Product Modal ----------------
   const openAddModal = () => {
     setEditingProduct(null);
+    setOrderProduct(null);
     setFormData({ name: "", price: "", stock: "", description: "" });
     setModalShow(true);
   };
 
   const openEditModal = (product) => {
     setEditingProduct(product);
+    setOrderProduct(null);
     setFormData({
       name: product.name,
       price: product.price,
@@ -83,24 +57,18 @@ const Products = () => {
     setModalShow(true);
   };
 
-  const handleFormChange = (e) => {
-    const { value, name } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (formData) => {
     try {
-      const data = await addOrUpdateProduct.request(
-        formData,
-        editingProduct?._id,
+      const data = editingProduct
+        ? await put(`/products/${editingProduct._id}`, formData)
+        : await post("/products", formData);
+
+      setProducts((prev) =>
+        editingProduct
+          ? prev.map((p) => (p._id === editingProduct._id ? data : p))
+          : [data, ...prev],
       );
-      if (editingProduct) {
-        setProducts((prev) =>
-          prev.map((p) => (p._id === editingProduct._id ? data : p)),
-        );
-      } else {
-        setProducts((prev) => [data, ...prev]);
-      }
+
       setModalShow(false);
     } catch (err) {
       console.error(err);
@@ -110,17 +78,19 @@ const Products = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?"))
       return;
+
     try {
-      await deleteProductApi.request(id);
+      await del(`/products/${id}`);
       setProducts((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
     }
   };
 
-  // --- Order Modal ---
+  // ---------------- Order Modal ----------------
   const openOrderModal = (product) => {
     setOrderProduct(product);
+    setEditingProduct(null);
     setFormData({
       name: product.name,
       quantity: "",
@@ -130,7 +100,7 @@ const Products = () => {
   };
 
   const handleOrderChange = (e) => {
-    const { value, name } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -138,18 +108,17 @@ const Products = () => {
     if (!orderProduct) return;
 
     const qty = Number(formData.quantity);
-    if (qty > orderProduct.stock || qty <= 0) {
+    if (qty <= 0 || qty > orderProduct.stock) {
       setErrorMsg("Quantity must be between 1 and available stock.");
       return;
     }
 
     try {
-      const data = await addOrderApi.request({
+      await post("/orders", {
         productId: orderProduct._id,
         quantity: qty,
       });
 
-      // Emit stock update via socket
       socket?.emit("order:placed", {
         productId: orderProduct._id,
         stock: orderProduct.stock - qty,
@@ -157,12 +126,13 @@ const Products = () => {
 
       setModalShow(false);
     } catch (err) {
-      setErrorMsg(err?.response?.data?.message || "Order failed");
+      setErrorMsg(error || "Order failed");
     }
   };
 
-  // --- Table ---
+  // ---------------- Table ----------------
   const columns = ["Name", "Price", "Stock", "Description", "Actions"];
+
   const data = products.map((p) => ({
     Name: p.name,
     Price: `$${p.price}`,
@@ -173,18 +143,21 @@ const Products = () => {
         <button
           className="btn btn-sm btn-success me-1"
           onClick={() => openOrderModal(p)}
+          disabled={loading}
         >
           Add Order
         </button>
         <button
           className="btn btn-sm btn-primary me-1"
           onClick={() => openEditModal(p)}
+          disabled={loading}
         >
           Edit
         </button>
         <button
           className="btn btn-sm btn-danger"
           onClick={() => handleDelete(p._id)}
+          disabled={loading}
         >
           Delete
         </button>
@@ -192,62 +165,119 @@ const Products = () => {
     ),
   }));
 
+  const productFormConfig = [
+    {
+      fieldName: "name",
+      label: "Name",
+      type: "text",
+      placeholder: "Enter product name",
+      validation: [
+        {
+          ruleType: "function",
+          rule: (value) => !!value && value.trim() !== "",
+          errorMessage: "Name is required",
+        },
+        {
+          ruleType: "function",
+          rule: (value) => value.length >= 3,
+          errorMessage: "Name must be at least 3 characters",
+        },
+      ],
+    },
+
+    {
+      fieldName: "price",
+      label: "Price",
+      type: "number",
+      placeholder: "Enter price",
+      validation: [
+        {
+          ruleType: "function",
+          rule: (value) => value !== "" && value !== null,
+          errorMessage: "Price is required",
+        },
+        {
+          ruleType: "function",
+          rule: (value) => Number(value) > 0,
+          errorMessage: "Price must be greater than 0",
+        },
+      ],
+    },
+
+    {
+      fieldName: "stock",
+      label: "Stock",
+      type: "number",
+      placeholder: "Enter stock quantity",
+      validation: [
+        {
+          ruleType: "function",
+          rule: (value) => value !== "" && value !== null,
+          errorMessage: "Stock is required",
+        },
+        {
+          ruleType: "function",
+          rule: (value) =>
+            Number.isInteger(Number(value)) && Number(value) >= 0,
+          errorMessage: "Stock must be a valid non-negative integer",
+        },
+      ],
+    },
+
+    {
+      fieldName: "description",
+      label: "Description",
+      type: "textarea",
+      placeholder: "Enter description",
+      validation: [
+        {
+          ruleType: "function",
+          rule: (value) => !value || value.length <= 500,
+          errorMessage: "Description cannot exceed 500 characters",
+        },
+      ],
+    },
+  ];
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h4>Products</h4>
-        <button className="btn btn-success" onClick={openAddModal}>
+        <button
+          className="btn btn-success"
+          onClick={openAddModal}
+          disabled={loading}
+        >
           + Add Product
         </button>
       </div>
 
+      {error && <div className="alert alert-danger">{error}</div>}
+
       <Table columns={columns} data={data} />
 
       {/* Product Add/Edit Modal */}
-      {editingProduct !== null || orderProduct === null ? (
+      {!orderProduct ? (
         <Modal
           show={modalShow}
           title={editingProduct ? "Edit Product" : "Add Product"}
           onClose={() => setModalShow(false)}
-          onConfirm={handleSubmit}
+          onConfirm={() => formRef.current.submitForm()}
           confirmText={editingProduct ? "Update" : "Add"}
         >
-          <FormInput
-            label="Name"
-            name="name"
-            value={formData.name}
-            onChange={handleFormChange}
-            required
-          />
-          <FormInput
-            label="Price"
-            name="price"
-            type="number"
-            value={formData.price}
-            onChange={handleFormChange}
-            required
-          />
-          <FormInput
-            label="Stock"
-            name="stock"
-            type="number"
-            value={formData.stock}
-            onChange={handleFormChange}
-            required
-          />
-          <FormInput
-            label="Description"
-            name="description"
-            type="textarea"
-            value={formData.description}
-            onChange={handleFormChange}
+          <CommonForm
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            config={productFormConfig}
+            ref={formRef}
           />
         </Modal>
       ) : (
         // Order Modal
         <Modal
           show={modalShow}
-          title={`Order: ${orderProduct?.name}`}
+          title={`Order: ${orderProduct.name}`}
           onClose={() => setModalShow(false)}
           onConfirm={handleOrderSubmit}
           confirmText="Place Order"
@@ -257,7 +287,6 @@ const Products = () => {
             label="Product"
             name="name"
             value={formData.name}
-            onChange={() => {}}
             disabled
           />
           <FormInput

@@ -8,6 +8,12 @@ export const initSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("🔌 Socket connected:", socket.id);
+    console.log("🔌 Socket-connected:", socket.id);
+    socket.on("joinUserRoom", (data) => {
+      console.log("======>joinUserRoom:", data);
+      if (data.role === "user") {
+        socket.join("data");
+      }
+    });
   });
 };

@@ -25,7 +25,6 @@ const Products = () => {
   const socket = useContext(SocketContext);
 
   useSocketEvent({
-    title: "Products Page",
     onInventoryUpdate: ({ productId, stock }) =>
       setProducts((prev) =>
         prev.map((p) => (p._id === productId ? { ...p, stock } : p)),

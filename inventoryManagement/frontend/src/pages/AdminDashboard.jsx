@@ -10,7 +10,8 @@ const AdminDashboard = () => {
 
   useSocketEvent({
     title: "Dashboard Page",
-    onInventoryUpdate: (order) => setOrders((prev) => [order, ...prev]),
+    onInventoryUpdate: (order) =>
+      setOrders((prev) => console.log({ order, orders })),
   });
 
   useEffect(() => {
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
     if (!socket) return;
 
     socket.on("admin:new-order", (data) => {
+      console.log({ data, orders });
       setOrders((prev) => [data, ...prev]);
     });
 

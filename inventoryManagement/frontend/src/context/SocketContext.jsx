@@ -18,8 +18,9 @@ export const SocketProvider = ({ children }) => {
     });
 
     // Join user-specific room
-    s.emit("joinUserRoom", user.id);
-
+    console.log("object1");
+    s.emit("joinUserRoom", user);
+    console.log("object2");
     // Admin join handled separately if user.role==='admin'
     if (user.role === "admin") s.emit("joinAdminRoom");
 

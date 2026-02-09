@@ -42,7 +42,6 @@ export const getAll = async (req) => {
   const userRole = req.user.role;
   if (userRole === "user") {
     const orders = await Order.find({ userId: userId }).sort({ createdAt: -1 });
-    console.log("----------------------->", { orders, userId });
     return orders;
   }
   return Order.find().sort({ createdAt: -1 });

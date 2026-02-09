@@ -10,7 +10,7 @@ const Navbar = () => {
 
       <div className="d-flex align-items-center gap-3">
         <span className="text-muted">
-          Role: <strong>{user?.role}</strong>
+          {user?.name} <strong>{user?.role}</strong>
         </span>
         <button className="btn btn-outline-danger btn-sm" onClick={logout}>
           Logout

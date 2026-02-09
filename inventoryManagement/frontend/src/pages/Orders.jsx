@@ -1,21 +1,20 @@
 import { useEffect, useState, useContext } from "react";
-import api from "../api/axios";
 import Table from "../components/common/Table";
 import { useApi } from "../api/useApi";
 import useSocketEvent from "./useSocketEvent";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
+  const { get } = useApi();
   useSocketEvent({
     title: "Order Page",
     onInventoryUpdate: (order) => setOrders((prev) => [order, ...prev]),
   });
 
   // --- Fetch user's orders ---
-  const fetchOrders = useApi(() => api.get("/orders"));
 
   useEffect(() => {
-    fetchOrders.request().then((data) => setOrders(data));
+    get("/orders").then(setOrders);
   }, []);
 
   // --- Table mapping ---

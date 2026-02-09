@@ -6,13 +6,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
-    return token ? { token, role } : null;
+    const name = localStorage.getItem("name");
+    return token ? { token, role, name } : null;
   });
 
-  const login = ({ token, role }) => {
+  const login = ({ token, role, name }) => {
     localStorage.setItem("token", token);
     localStorage.setItem("role", role);
-    setUser({ token, role });
+    localStorage.setItem("name", name);
+    setUser({ token, role, name });
   };
 
   const logout = () => {

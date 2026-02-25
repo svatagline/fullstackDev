@@ -1,305 +1,95 @@
-import { useEffect, useState, useContext, useRef } from "react";
-import { SocketContext } from "../context/SocketContext";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import Table from "../components/common/Table";
-import Modal from "../components/common/Modal";
-import FormInput from "../components/common/FormInput";
-import { useApi } from "../api/useApi";
-import useSocketEvent from "./useSocketEvent";
-import CommonForm from "../components/common/CommonForm";
+
+// Fetcher function (same as SWR fetcher)
+const fetchProducts = async () => {
+  const res = await fetch("http://localhost:5000/api/products");
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch products");
+  }
+
+  return res.json();
+};
 
 const Products = () => {
-  const [products, setProducts] = useState([]);
-  const [modalShow, setModalShow] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [orderProduct, setOrderProduct] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-    stock: "",
-    description: "",
-    quantity: "",
-  });
-  const [errorMsg, setErrorMsg] = useState("");
-  const formRef = useRef();
-  const { get, post, put, delete: del, loading, error } = useApi();
-  const socket = useContext(SocketContext);
+  // TanStack Query Hook
+  const {
+    data: products,
+    error,
+    isLoading,
+    refetch, // equivalent to mutate()
+    isFetching, // optional: background refresh indicator
+  } = useQuery({
+    queryKey: ["products"],
+    queryFn: fetchProducts,
 
-  useSocketEvent({
-    onInventoryUpdate: ({ productId, stock }) =>
-      setProducts((prev) =>
-        prev.map((p) => (p._id === productId ? { ...p, stock } : p)),
-      ),
+    // Cache configuration
+    staleTime: 1000 * 60, // ✅ 1 minute cache
+    gcTime: 1000 * 60 * 10, // cache kept 10 minutes
+
+    // Prevent unnecessary refetch
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  // ---------------- Fetch Products ----------------
-  useEffect(() => {
-    get("/products").then(setProducts);
-  }, []);
-
-  // ---------------- Product Modal ----------------
-  const openAddModal = () => {
-    setEditingProduct(null);
-    setOrderProduct(null);
-    setFormData({ name: "", price: "", stock: "", description: "" });
-    setModalShow(true);
-  };
-
-  const openEditModal = (product) => {
-    setEditingProduct(product);
-    setOrderProduct(null);
-    setFormData({
-      name: product.name,
-      price: product.price,
-      stock: product.stock,
-      description: product.description,
-    });
-    setModalShow(true);
-  };
-
-  const handleSubmit = async (formData) => {
-    try {
-      const data = editingProduct
-        ? await put(`/products/${editingProduct._id}`, formData)
-        : await post("/products", formData);
-
-      setProducts((prev) =>
-        editingProduct
-          ? prev.map((p) => (p._id === editingProduct._id ? data : p))
-          : [data, ...prev],
-      );
-
-      setModalShow(false);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
-
-    try {
-      await del(`/products/${id}`);
-      setProducts((prev) => prev.filter((p) => p._id !== id));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // ---------------- Order Modal ----------------
-  const openOrderModal = (product) => {
-    setOrderProduct(product);
-    setEditingProduct(null);
-    setFormData({
-      name: product.name,
-      quantity: "",
-    });
-    setErrorMsg("");
-    setModalShow(true);
-  };
-
-  const handleOrderChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleOrderSubmit = async () => {
-    if (!orderProduct) return;
-
-    const qty = Number(formData.quantity);
-    if (qty <= 0 || qty > orderProduct.stock) {
-      setErrorMsg("Quantity must be between 1 and available stock.");
-      return;
-    }
-
-    try {
-      await post("/orders", {
-        productId: orderProduct._id,
-        quantity: qty,
-      });
-
-      socket?.emit("order:placed", {
-        productId: orderProduct._id,
-        stock: orderProduct.stock - qty,
-      });
-
-      setModalShow(false);
-    } catch (err) {
-      setErrorMsg(error || "Order failed");
-    }
-  };
-
-  // ---------------- Table ----------------
+  // Table columns
   const columns = ["Name", "Price", "Stock", "Description", "Actions"];
 
-  const data = products.map((p) => ({
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center p-5">
+        <div className="spinner-border text-primary">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="alert alert-danger m-3">
+        <strong>Error:</strong> {error.message}
+      </div>
+    );
+  }
+
+  // Transform data for Table
+  const tableData = (products || []).map((p) => ({
     Name: p.name,
     Price: `$${p.price}`,
     Stock: p.stock,
     Description: p.description,
     Actions: (
-      <>
-        <button
-          className="btn btn-sm btn-success me-1"
-          onClick={() => openOrderModal(p)}
-          disabled={loading}
-        >
-          Add Order
-        </button>
-        <button
-          className="btn btn-sm btn-primary me-1"
-          onClick={() => openEditModal(p)}
-          disabled={loading}
-        >
-          Edit
-        </button>
-        <button
-          className="btn btn-sm btn-danger"
-          onClick={() => handleDelete(p._id)}
-          disabled={loading}
-        >
-          Delete
-        </button>
-      </>
+      <button
+        className="btn btn-sm btn-outline-secondary"
+        onClick={() => refetch()} // manual refresh
+      >
+        Refresh
+      </button>
     ),
   }));
 
-  const productFormConfig = [
-    {
-      fieldName: "name",
-      label: "Name",
-      type: "text",
-      placeholder: "Enter product name",
-      validation: [
-        {
-          ruleType: "function",
-          rule: (value) => !!value && value.trim() !== "",
-          errorMessage: "Name is required",
-        },
-        {
-          ruleType: "function",
-          rule: (value) => value.length >= 3,
-          errorMessage: "Name must be at least 3 characters",
-        },
-      ],
-    },
-
-    {
-      fieldName: "price",
-      label: "Price",
-      type: "number",
-      placeholder: "Enter price",
-      validation: [
-        {
-          ruleType: "function",
-          rule: (value) => value !== "" && value !== null,
-          errorMessage: "Price is required",
-        },
-        {
-          ruleType: "function",
-          rule: (value) => Number(value) > 0,
-          errorMessage: "Price must be greater than 0",
-        },
-      ],
-    },
-
-    {
-      fieldName: "stock",
-      label: "Stock",
-      type: "number",
-      placeholder: "Enter stock quantity",
-      validation: [
-        {
-          ruleType: "function",
-          rule: (value) => value !== "" && value !== null,
-          errorMessage: "Stock is required",
-        },
-        {
-          ruleType: "function",
-          rule: (value) =>
-            Number.isInteger(Number(value)) && Number(value) >= 0,
-          errorMessage: "Stock must be a valid non-negative integer",
-        },
-      ],
-    },
-
-    {
-      fieldName: "description",
-      label: "Description",
-      type: "textarea",
-      placeholder: "Enter description",
-      validation: [
-        {
-          ruleType: "function",
-          rule: (value) => !value || value.length <= 500,
-          errorMessage: "Description cannot exceed 500 characters",
-        },
-      ],
-    },
-  ];
-
-  if (error) {
-    return <div className="alert alert-danger">Error: {error}</div>;
-  }
   return (
-    <div>
+    <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4>Products</h4>
-        <button
-          className="btn btn-success"
-          onClick={openAddModal}
-          disabled={loading}
-        >
-          + Add Product
+        <h4 className="fw-bold">Product Management</h4>
+
+        <button className="btn btn-primary btn-sm" onClick={() => refetch()}>
+          {isFetching ? "Syncing..." : "Sync Data"}
         </button>
       </div>
 
-      {/* {error && <div className="alert alert-danger">{error}</div>} */}
-
-      <Table columns={columns} data={data} />
-
-      {/* Product Add/Edit Modal */}
-      {!orderProduct ? (
-        <Modal
-          show={modalShow}
-          title={editingProduct ? "Edit Product" : "Add Product"}
-          onClose={() => setModalShow(false)}
-          onConfirm={() => formRef.current.submitForm()}
-          confirmText={editingProduct ? "Update" : "Add"}
-        >
-          <CommonForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleSubmit}
-            config={productFormConfig}
-            ref={formRef}
-          />
-        </Modal>
+      {tableData.length > 0 ? (
+        <Table columns={columns} data={tableData} />
       ) : (
-        // Order Modal
-        <Modal
-          show={modalShow}
-          title={`Order: ${orderProduct.name}`}
-          onClose={() => setModalShow(false)}
-          onConfirm={handleOrderSubmit}
-          confirmText="Place Order"
-        >
-          {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-          <FormInput
-            label="Product"
-            name="name"
-            value={formData.name}
-            disabled
-          />
-          <FormInput
-            label="Quantity"
-            name="quantity"
-            type="number"
-            value={formData.quantity}
-            onChange={handleOrderChange}
-            required
-          />
-        </Modal>
+        <div className="text-center p-5 border rounded bg-light">
+          <p className="text-muted">No products found.</p>
+        </div>
       )}
     </div>
   );

@@ -46,8 +46,8 @@ export const useApi = () => {
   const methods = useMemo(() => {
     const createMethod =
       (method) =>
-      (url, data = null, config = {}) =>
-        request({ method, url, data, config });
+        (url, data = null, config = {}) =>
+          request({ method, url, data, config });
 
     return {
       get: createMethod("get"),

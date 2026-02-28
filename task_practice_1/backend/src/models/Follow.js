@@ -1,14 +1,14 @@
-// models/Like.js
+// models/Follow.js
 const mongoose = require("mongoose");
 
-const likeSchema = new mongoose.Schema(
+const followSchema = new mongoose.Schema(
     {
-        postId: {
+        followerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Post",
+            ref: "User",
             required: true
         },
-        userId: {
+        followingId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
@@ -17,7 +17,10 @@ const likeSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Prevent duplicate likes
-likeSchema.index({ postId: 1, userId: 1 }, { unique: true });
+// prevent duplicate follow
+followSchema.index(
+    { followerId: 1, followingId: 1 },
+    { unique: true }
+);
 
-module.exports = mongoose.model("Like", likeSchema);
+module.exports = mongoose.model("Follow", followSchema);

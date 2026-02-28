@@ -1,6 +1,6 @@
 const { BlogTable, BlogVersionTable } = require("../models/blog-model")
 
-const getBlogs = async (req, res) => {
+const getRecords = async (req, res) => {
 
 
 
@@ -33,7 +33,7 @@ const getBlogs = async (req, res) => {
 }
 
 
-const addBlog = async (req, res) => {
+const addRecord = async (req, res) => {
     const body = req.body
     const newBlog = await BlogTable.insertOne({
         title: body.title
@@ -53,7 +53,7 @@ const addBlog = async (req, res) => {
     })
 }
 
-const updateBlog = async (req, res) => {
+const updateRecord = async (req, res) => {
     const body = req.body
 
     if (body.title) {
@@ -82,7 +82,7 @@ const updateBlog = async (req, res) => {
     })
 }
 
-const deleteBlog = async (req, res) => {
+const deleteRecord = async (req, res) => {
     const body = req.body
     await BlogTable.updateOne({
         _id: body.id
@@ -101,6 +101,6 @@ const deleteBlog = async (req, res) => {
 
 
 module.exports = {
-    getBlogs, addBlog, updateBlog,
-    deleteBlog
+    getRecords, addRecord, updateRecord,
+    deleteRecord
 }

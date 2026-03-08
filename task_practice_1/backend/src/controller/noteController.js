@@ -18,7 +18,8 @@ const GetNotes = async (req, res) => {
 
 const AddNote = async (req, res) => {
     try {
-        const { title, description, user } = req.body
+        const { title, description } = req.body
+        const { user } = req.query
         const data = await NoteModel.insertOne({
             title,
             description,
@@ -35,7 +36,8 @@ const AddNote = async (req, res) => {
 
 const UpdateNote = async (req, res) => {
     try {
-        const { title, description, _id } = req.body
+        const { title, description } = req.body
+        const { _id } = req.query
         const data = await NoteModel.updateOne({ _id }, {
             ...(title ? { title } : {}),
             ...(description ? { description } : {}),
